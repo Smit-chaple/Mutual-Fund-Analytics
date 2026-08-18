@@ -1,7 +1,5 @@
 import pandas as pd
-import sqlalchemy as sa
-import sqlite3
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 engine = create_engine("sqlite:///SQL/bluestoke_mf.db")
 
@@ -50,7 +48,7 @@ investor.to_sql(
 )
 print("fact_transactions table created successfully in the database.","\n")
 
-mon_sip = pd.read_csv("DATA/RAW/04_monthly_sip_inflows.csv")
+mon_sip = pd.read_csv("DATA/PROCESSED/04_monthly_sip_inflows.csv")
 mon_sip.to_sql(
     name = "fact_sip",
     con = engine,

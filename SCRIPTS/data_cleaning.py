@@ -21,11 +21,11 @@ clean_his.info()
 
 clean_his = clean_his.sort_values(by=['amfi_code', 'date'], ascending=True)
 
-print(clean_his.isnull().sum(),"\n")
+if clean_his["nav"].isnull().any():
+    raise ValueError("NAV contains missing values")
 
-print(clean_his[["amfi_code", "date"]].duplicated().sum(),"\n")
-
-print((clean_his['nav'] <= 0).sum(),"\n")
+if (clean_his["nav"] <= 0).any():
+    raise ValueError("NAV contains zero or negative values")
 
 #I checked for missing NAV values. Since no missing values were found, forward-filling was not required
 
@@ -83,19 +83,23 @@ return_cols =[
 print(scheme_perf[return_cols].dtypes,"\n")
 
 for col in return_cols:
+
     Q1 = scheme_perf[col].quantile(0.25)
     Q3 = scheme_perf[col].quantile(0.75)
-    IQR =Q3 - Q1
+    IQR = Q3 - Q1
 
     lower = Q1 - 1.5 * IQR
     upper = Q3 + 1.5 * IQR
 
-anomalies = scheme_perf[(scheme_perf[col] < lower) | (scheme_perf[col] > upper)]
+    anomalies = scheme_perf[
+        (scheme_perf[col] < lower) |
+        (scheme_perf[col] > upper)
+    ]
 
-print(f"\n{col}")
-print("lower limit: ",lower)
-print("upper limit: ",upper)
-print("Potential Anomalies: ",len(anomalies),"\n")
+    print(f"\n{col}")
+    print("Lower limit:", lower)
+    print("Upper limit:", upper)
+    print("Potential anomalies:", len(anomalies))
 
 col = 'benchmark_3yr_pct'
 
@@ -140,7 +144,16 @@ print("Column Names: ", fund.columns,"\n")
 print("Checking for missing values:","\n", fund.isnull().sum(),"\n")
 print("Duplicate Values:","\n", fund[["amfi_code", "scheme_name"]].duplicated().sum(),"\n")
 
-fund["launch_date"] = pd.to_datetime(fund["launch_date"], format="%Y-%m-%d")
+# Remove completely empty rows
+fund.dropna(how="all", inplace=True)
+
+# Remove rows where essential fund information is missing
+fund.dropna(
+    subset=["amfi_code", "scheme_name", "fund_house"],
+    inplace=True
+)
+
+fund["launch_date"] = pd.to_datetime(fund["launch_date"], format="%d-%m-%Y")
 fund.to_csv("DATA/PROCESSED/01_fund_master.csv", index=False)
 
 # aum by fund house
@@ -154,7 +167,7 @@ print("Column Names: ", aum_fund_house.columns,"\n")
 print("Checking for missing values:","\n", aum_fund_house.isnull().sum(),"\n")
 print("Duplicate Values:","\n", aum_fund_house[["date","fund_house"]].duplicated().sum(),"\n")
 
-aum_fund_house["date"] =pd.to_datetime(aum_fund_house["date"], format = "%Y-%m-%d")
+aum_fund_house["date"] =pd.to_datetime(aum_fund_house["date"], format = "%d-%m-%Y")
 aum_fund_house.to_csv("DATA/PROCESSED/03_aum_by_fund_house.csv", index=False)
 
 # Monthly Sip Inflows
@@ -225,7 +238,7 @@ ind_folio.drop(
 )
 
 ind_folio["month"] = pd.to_datetime(ind_folio["month"], format = "%Y-%m")
-ind_folio.to_csv("DATA/PROCESSED/06_industri_folio_count.csv", index = False)
+ind_folio.to_csv("DATA/PROCESSED/06_industry_folio_count.csv", index=False)
 
 # Portfolio Holding
 port_holding = pd.read_csv("DATA/RAW/09_portfolio_holdings.csv")
@@ -238,7 +251,7 @@ print("Column Names: ",port_holding.columns,"\n")
 print("Checking for missing values: ","\n",port_holding.isnull().sum(),"\n")
 print("Duplicated Values: ","\n",port_holding[["amfi_code", "stock_symbol", "portfolio_date"]].duplicated().sum(),"\n")
 print((port_holding['weight_pct'] > 0).sum(),"\n")
-port_holding["portfolio_date"] = pd.to_datetime(port_holding["portfolio_date"], format = "%Y-%m-%d")
+port_holding["portfolio_date"] = pd.to_datetime(port_holding["portfolio_date"], format = "%d-%m-%Y")
 port_holding.to_csv("DATA/PROCESSED/09_portfolio_holdings.csv", index = False)
 
 # Benchmark_indices
@@ -253,5 +266,5 @@ print("Checking for missing values: ", "\n", bench_indice.isnull().sum(), "\n")
 print((bench_indice["close_value"] < 0).sum(),"\n")
 print("Duplicate Values: ", "\n", bench_indice[["index_name", "date"]].duplicated().sum(), "\n")
 
-bench_indice["date"] = pd.to_datetime(bench_indice["date"], format = "%Y-%m-%d")
+bench_indice["date"] = pd.to_datetime(bench_indice["date"], format = "%d-%m-%Y")
 bench_indice.to_csv("DATA/PROCESSED/10_benchmark_indices.csv", index = False)
